@@ -2192,7 +2192,6 @@ Instance.new("UICorner", TouchToggleButton).CornerRadius = UDim.new(0, 30)
 pinchTouches = {}
 pinchStartDist = nil
 pinchStartScale = UIScale.Scale
-pinchStartPos = MainFrame.Position
 
 connectButton(TouchToggleButton, function()
     if not isAuthorized then
@@ -2216,7 +2215,6 @@ UserInputService.TouchStarted:Connect(function(input)
     if #pinchTouches == 2 then
         pinchStartDist = (pinchTouches[1].Position - pinchTouches[2].Position).Magnitude
         pinchStartScale = UIScale.Scale
-        pinchStartPos = MainFrame.Position
     end
 end)
 
@@ -2247,12 +2245,17 @@ UserInputService.TouchMoved:Connect(function()
     local newDist = (touchOne.Position - touchTwo.Position).Magnitude
     local scale = math.clamp(newDist / pinchStartDist, 0.5, 2)
     UIScale.Scale = math.clamp(pinchStartScale * scale, 0.5, 2)
+
+    local centeredX = -math.floor((MAIN_FRAME_WIDTH * UIScale.Scale) / 2)
+    local centeredY = -math.floor((MAIN_FRAME_HEIGHT * UIScale.Scale) / 2)
     MainFrame.Position = UDim2.new(
-        pinchStartPos.X.Scale,
-        math.floor(pinchStartPos.X.Offset),
-        pinchStartPos.Y.Scale,
-        math.floor(pinchStartPos.Y.Offset)
+        0.5,
+        centeredX,
+        0.5,
+        centeredY
     )
+    mainFrameRestPosition = MainFrame.Position
+    mainFrameExpandedPosition = MainFrame.Position
 end)
 
 AuthFrame = Instance.new("Frame")
@@ -8594,6 +8597,7 @@ pcall(function()
     settingsPnListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
     settingsPnEntries = {
+        {date = "2026-04-18", title = "mobile ui bug fixed again", details = ""},
         {date = "2026-04-18", title = "fixed mobile ui bug", details = ""},
         {date = "2026-04-17", title = "UI re organized", details = ""},
         {date = "2026-04-17", title = "Added dedicated presets page", details = ""},
@@ -12780,16 +12784,8 @@ mainDragFrameStart = nil
 mainDragging = false
 mainDragIsTouch = false
 
-function stopMainFrameDrag()
-    mainDragging = false
-    mainDragIsTouch = false
-    mainDragInput = nil
-    mainDragStart = nil
-    mainDragFrameStart = nil
-end
-
-dragBar.InputBegan:Connect(function(input)
-    if mainFrameDragDisabled then
+function beginMainFrameDrag(input)
+    if mainFrameDragDisabled or mainUiCollapsed or not MainFrame.Visible then
         return
     end
 
@@ -12800,7 +12796,26 @@ dragBar.InputBegan:Connect(function(input)
         mainDragStart = input.Position
         mainDragFrameStart = MainFrame.Position
     end
+end
+
+function stopMainFrameDrag()
+    mainDragging = false
+    mainDragIsTouch = false
+    mainDragInput = nil
+    mainDragStart = nil
+    mainDragFrameStart = nil
+end
+
+dragBar.InputBegan:Connect(function(input)
+    beginMainFrameDrag(input)
 end)
+
+if Sidebar then
+    Sidebar.Active = true
+    Sidebar.InputBegan:Connect(function(input)
+        beginMainFrameDrag(input)
+    end)
+end
 
 dragBar.InputEnded:Connect(function(input)
     if not mainDragging then
