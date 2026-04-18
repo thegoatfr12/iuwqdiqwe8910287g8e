@@ -1829,8 +1829,8 @@ function applyMobileTextAndLineSizing()
         )
     end
 
-    local textScale = math.clamp(1.04 + ((1 - viewportScale) * 0.18), 1.02, 1.14)
-    local lineScale = math.clamp(1.08 + ((1 - viewportScale) * 0.22), 1.08, 1.24)
+    local textScale = math.clamp(viewportScale * 0.98, 0.84, 0.98)
+    local lineScale = math.clamp(1.02 + ((1 - viewportScale) * 0.18), 1.02, 1.16)
 
     for _, obj in ipairs(MainFrame:GetDescendants()) do
         if (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) and not obj.TextScaled then
@@ -1841,6 +1841,16 @@ function applyMobileTextAndLineSizing()
             end
             if type(baseTextSize) == "number" and baseTextSize > 0 then
                 obj.TextSize = math.max(10, math.floor(baseTextSize * textScale + 0.5))
+
+                local availableWidth = obj.AbsoluteSize.X - 8
+                local availableHeight = obj.AbsoluteSize.Y - 4
+                if availableWidth > 0 and availableHeight > 0 then
+                    local fittedSize = obj.TextSize
+                    while fittedSize > 10 and (obj.TextBounds.X > availableWidth or obj.TextBounds.Y > availableHeight) do
+                        fittedSize = fittedSize - 1
+                        obj.TextSize = fittedSize
+                    end
+                end
             end
         elseif obj:IsA("Frame") then
             local nameLower = string.lower(obj.Name or "")
@@ -12678,6 +12688,7 @@ dragBar.ZIndex = 29
 
 if isMobileClient then
     dragBar.Size = UDim2.new(1, 0, 0, 44)
+    dragBar.ZIndex = 80
 end
 
 mainFrameCollapseButton = Instance.new("TextButton", dragBar)
@@ -12697,6 +12708,7 @@ Instance.new("UICorner", mainFrameCollapseButton).CornerRadius = UDim.new(0, 6)
 if isMobileClient then
     mainFrameCollapseButton.Size = UDim2.new(0, 26, 0, 26)
     mainFrameCollapseButton.Position = UDim2.new(1, -34, 0, 9)
+    mainFrameCollapseButton.ZIndex = 81
 end
 
 if isMobileClient then
@@ -12734,6 +12746,23 @@ if isMobileClient then
         end
 
         applyMobileTextAndLineSizing()
+    end)
+
+    MainFrame.DescendantAdded:Connect(function(added)
+        if scriptUnloaded then
+            return
+        end
+        if not added then
+            return
+        end
+        if added:IsA("TextLabel") or added:IsA("TextButton") or added:IsA("TextBox") or added:IsA("Frame") then
+            task.defer(function()
+                if scriptUnloaded then
+                    return
+                end
+                applyMobileTextAndLineSizing()
+            end)
+        end
     end)
 end
 
@@ -12779,7 +12808,7 @@ dragBar.InputEnded:Connect(function(input)
     end
 
     if mainDragIsTouch then
-        if input ~= mainDragInput then
+        if input.UserInputType ~= Enum.UserInputType.Touch then
             return
         end
     elseif input.UserInputType ~= Enum.UserInputType.MouseButton1 then
@@ -12795,7 +12824,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 
     if mainDragIsTouch then
-        if input.UserInputType ~= Enum.UserInputType.Touch or input ~= mainDragInput then
+        if input.UserInputType ~= Enum.UserInputType.Touch then
             return
         end
     elseif input.UserInputType ~= Enum.UserInputType.MouseMovement then
@@ -12833,7 +12862,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 
     if mainDragIsTouch then
-        if input ~= mainDragInput then
+        if input.UserInputType ~= Enum.UserInputType.Touch then
             return
         end
     elseif input.UserInputType ~= Enum.UserInputType.MouseButton1 then
