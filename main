@@ -2211,8 +2211,24 @@ UserInputService.TouchStarted:Connect(function(input)
         return
     end
 
+    if isMobileClient and MainFrame and MainFrame.Visible and not mainUiCollapsed then
+        local framePos = MainFrame.AbsolutePosition
+        local frameSize = MainFrame.AbsoluteSize
+        local sidebarWidth = math.min(72, math.max(56, frameSize.X * 0.22))
+        local touchPos = input.Position
+        local withinSidebarX = touchPos.X >= framePos.X and touchPos.X <= (framePos.X + sidebarWidth)
+        local withinFrameY = touchPos.Y >= framePos.Y and touchPos.Y <= (framePos.Y + frameSize.Y)
+
+        if withinSidebarX and withinFrameY and type(beginMainFrameDrag) == "function" and not mainDragging then
+            beginMainFrameDrag(input)
+        end
+    end
+
     table.insert(pinchTouches, input)
     if #pinchTouches == 2 then
+        if type(stopMainFrameDrag) == "function" then
+            stopMainFrameDrag()
+        end
         pinchStartDist = (pinchTouches[1].Position - pinchTouches[2].Position).Magnitude
         pinchStartScale = UIScale.Scale
     end
